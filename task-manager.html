@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bento Task Pro | Full Edition</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    
+    <style>
+        :root {
+            /* DARK THEME (Amethyst & Gold) */
+            --bg: #0d0b14;
+            --card: rgba(30, 25, 45, 0.85);
+            --accent: #d4af37;
+            --text: #f8f1ff;
+            --subtext: #b1a7c1;
+            --border: rgba(212, 175, 55, 0.4);
+            --glow: rgba(212, 175, 55, 0.2);
+            --danger: #ff4d4d;
+        }
+
+        [data-theme="light"] {
+            /* LIGHT THEME (Rose & Slate) */
+            --bg: #faf9fb;
+            --card: rgba(255, 255, 255, 0.9);
+            --accent: #e91e63;
+            --text: #2d3436;
+            --subtext: #636e72;
+            --border: rgba(233, 30, 99, 0.2);
+            --glow: rgba(233, 30, 99, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            transition: background 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        .app-container { width: 100%; max-width: 1100px; padding: 40px 20px; }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        
+        .mode-toggle {
+            padding: 10px 20px; border-radius: 50px; border: 1px solid var(--border);
+            background: var(--card); color: var(--text); cursor: pointer; font-weight: bold;
+        }
+
+        /* --- Styled Input Area --- */
+        .input-box {
+            background: var(--card); padding: 30px; border-radius: 35px; border: 1px solid var(--border);
+            backdrop-filter: blur(25px); margin-bottom: 50px; display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px;
+        }
+
+        .input-wrapper { display: flex; flex-direction: column; gap: 5px; position: relative; }
+        .input-wrapper label { font-size: 0.7rem; color: var(--accent); font-weight: 900; text-transform: uppercase; }
+
+        input, select {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+            padding: 12px; border-radius: 12px; color: var(--text); outline: none; appearance: none;
+        }
+
+        select option { background: #1a1625; color: white; }
+
+        .full-width { grid-column: span 4; }
+
+        .add-btn {
+            background: linear-gradient(135deg, var(--accent), #f2d06b);
+            color: #1a1625; border: none; padding: 15px; border-radius: 15px;
+            font-weight: 900; cursor: pointer; text-transform: uppercase;
+        }
+
+        /* --- Task Cards --- */
+        .task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+
+        .task-card {
+            background: var(--card); padding: 30px; border-radius: 30px; border: 1px solid var(--border);
+            position: relative; overflow: hidden; transform-style: preserve-3d;
+        }
+
+        .flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; }
+
+        .priority-badge { position: absolute; top: 20px; right: 20px; padding: 5px 10px; border-radius: 8px; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; }
+        .p-high { background: var(--danger); color: white; }
+        .p-med { background: #ff9800; color: white; }
+        .p-low { background: #4caf50; color: white; }
+
+        .category-tag { font-size: 0.75rem; color: var(--accent); font-weight: 800; }
+        .task-card h3 { margin: 10px 0; color: var(--accent); font-size: 1.5rem; }
+
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        .card-btn { flex: 1; padding: 10px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.85rem; }
+        .edit-btn { background: transparent; border: 1px solid var(--subtext); color: var(--subtext); }
+        .done-btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .done-btn:hover { background: var(--accent); color: #000; }
+
+        /* --- Modal --- */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(10px);
+        }
+        .modal-content { background: var(--bg); padding: 40px; border-radius: 30px; border: 1px solid var(--accent); width: 350px; text-align: center; }
+
+        .particle { position: absolute; border-radius: 50%; pointer-events: none; z-index: 100; }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <div class="app-container">
+        <header>
+            <h1 style="color:var(--accent)">Task.Flow Pro</h1>
+            <button class="mode-toggle" onclick="toggleTheme()">🌓 Switch Theme</button>
+        </header>
+
+        <div class="input-box">
+            <div class="input-wrapper full-width">
+                <label>Mission Title</label>
+                <input type="text" id="taskName" placeholder="Enter objective...">
+            </div>
+            <div class="input-wrapper">
+                <label>Priority</label>
+                <select id="taskPriority">
+                    <option value="high">🎓High</option>
+                    <option value="med">⚡Medium</option>
+                    <option value="low">🌱Low</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <label>Category</label>
+                <select id="taskCat">
+                    <option value="College">🎓College</option>
+                    <option value="Work">💻Work</option>
+                    <option value="Personal">🏠Personal</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <label>Days</label>
+                <input type="number" id="taskDays" placeholder="0">
+            </div>
+            <button class="add-btn full-width" onclick="createTask()">Deploy Mission</button>
+        </div>
+
+        <div class="task-grid" id="taskGrid"></div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 style="color:var(--accent)">Edit Mission</h2>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <input type="text" id="editName">
+                <input type="number" id="editDays">
+                <button class="add-btn" onclick="saveEdit()">Update</button>
+                <button class="edit-btn" style="border:none" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = [];
+        let currentEditId = null;
+
+        function toggleTheme() {
+            document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+        }
+
+        function createTask() {
+            const name = document.getElementById('taskName').value;
+            const priority = document.getElementById('taskPriority').value;
+            const category = document.getElementById('taskCat').value;
+            const days = document.getElementById('taskDays').value;
+            if(!name || !days) return;
+
+            const task = { id: Date.now(), name, priority, category, days };
+            tasks.push(task);
+            renderTasks();
+            document.getElementById('taskName').value = '';
+            document.getElementById('taskDays').value = '';
+        }
+
+        function renderTasks() {
+            const grid = document.getElementById('taskGrid');
+            grid.innerHTML = '';
+            tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.className = 'task-card';
+                card.setAttribute('data-tilt', '');
+                card.innerHTML = `
+                    <div class="flash"></div>
+                    <div class="priority-badge p-${task.priority}">${task.priority}</div>
+                    <span class="category-tag">#${task.category}</span>
+                    <h3>${task.name}</h3>
+                    <p style="font-size:0.8rem; color:var(--subtext)">Delivery in: ${task.days} Days</p>
+                    <div class="actions">
+                        <button class="card-btn edit-btn" onclick="openEdit(${task.id})">Edit</button>
+                        <button class="card-btn done-btn" onclick="supernovaFinish(this, ${task.id})">Finish</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            VanillaTilt.init(document.querySelectorAll(".task-card"), { max: 10, speed: 400, glare: true });
+        }
+
+        function openEdit(id) {
+            currentEditId = id;
+            const task = tasks.find(t => t.id === id);
+            document.getElementById('editName').value = task.name;
+            document.getElementById('editDays').value = task.days;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function saveEdit() {
+            const task = tasks.find(t => t.id === currentEditId);
+            task.name = document.getElementById('editName').value;
+            task.days = document.getElementById('editDays').value;
+            closeModal();
+            renderTasks();
+        }
+
+        function closeModal() { document.getElementById('editModal').style.display = 'none'; }
+
+        function supernovaFinish(btn, id) {
+    const card = btn.closest('.task-card');
+    const flash = card.querySelector('.flash');
+    const rect = card.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const accent = getComputedStyle(document.body).getPropertyValue('--accent');
+    
+    const tl = gsap.timeline();
+
+    // STEP 1: The "Charge Up" (Squeeze the card)
+    tl.to(card, { 
+        scale: 0.85, 
+        filter: "brightness(2)", 
+        duration: 0.15, 
+        ease: "back.in(2)" 
+    })
+    
+    // STEP 2: The Flash and Screen Shake
+    .to(flash, { opacity: 1, duration: 0.05 })
+    .to(".app-container", { 
+        x: (i) => Math.random() * 10 - 5, 
+        y: (i) => Math.random() * 10 - 5, 
+        duration: 0.05, 
+        repeat: 5, 
+        yoyo: true 
+    })
+
+    // STEP 3: The Supernova Explosion
+    .to(card, { 
+        scale: 2.5, 
+        opacity: 0, 
+        filter: "blur(30px)", 
+        rotation: 45,
+        duration: 0.5, 
+        ease: "expo.out", 
+        onStart: () => {
+            createExplosionParticles(centerX, centerY, accent);
+        },
+        onComplete: () => {
+            // Reset app-container position
+            gsap.set(".app-container", { x: 0, y: 0 });
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+    });
+}
+
+// Helper function for the "Crazy" particles
+function createExplosionParticles(x, y, color) {
+    for (let i = 0; i < 60; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        document.body.appendChild(p);
+        
+        const size = Math.random() * 10 + 4;
+        gsap.set(p, { 
+            width: size, 
+            height: size, 
+            x: x, 
+            y: y, 
+            backgroundColor: i % 3 === 0 ? "#fff" : color,
+            boxShadow: `0 0 20px ${color}`,
+            borderRadius: i % 2 === 0 ? "50%" : "2px" // Mix of dust and sparks
+        });
+
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = 400 + Math.random() * 600;
+
+        gsap.to(p, { 
+            x: x + Math.cos(angle) * velocity, 
+            y: y + Math.sin(angle) * velocity, 
+            opacity: 0, 
+            scale: 0, 
+            rotation: 360,
+            duration: 1.2, 
+            ease: "power4.out", 
+            onComplete: () => p.remove() 
+        });
+    }
+}
+    </script>
+</body>
+</html>
